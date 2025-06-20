@@ -1,0 +1,79 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class UserTest extends TestCase
+{
+    use RefreshDatabase;
+
+    //prueba usuario no envía teléfono
+    public function prueba_sin_telefono(): void
+    {
+        $request = [
+            'text' => 'Texto prueba',
+            // No hay celukar
+        ];
+        $response = $this->post('/sentiment', $request);
+        $response->assertStatus(400);
+        $response->assertJson([
+            'error' => "El campo 'phone' es requerido"
+        ]);
+    }
+
+    //prueba usuario no envía texto
+    public function prueba_sin_texto(): void
+    {
+        $request = [
+            // No hay texto
+            'phone' => '134567890'
+        ];
+        $response = $this->post('/sentiment', $request);
+        $response->assertStatus(400);
+        $response->assertJson([
+            'error' => "El campo 'text' es requerido"
+        ]);
+    }
+
+    //Prueba por texto positivo
+    public function prueba_texto_positivo()
+    {
+        $response = $this->post('/sentiment', [
+            'text' => 'Me siento feliz',
+            'phone' => '1234567890'
+        ]);
+        $response->assertStatus(200);
+        $response->assertJson([
+            'sentiment' => 'positivo'
+        ]);
+    }
+
+    //Prueba por texto negativo
+    public function prueba_texto_negativo()
+    {
+        $response = $this->post('/sentiment', [
+            'text' => 'Estoy muy triste',
+            'phone' => '1234567890'
+        ]);
+        $response->assertStatus(200);
+        $response->assertJson([
+            'sentiment' => 'negativo'
+        ]);
+    }
+
+    //Prueba envío de notificación por un texto negativo
+    public function prueba_envio_notificacion()
+    {
+        $response = $this->post('/sentiment', [
+            'text' => 'Estoy muy triste',
+            'phone' => '134567890'
+        ]);
+        $response->assertStatus(200);
+        $this->assertStringContainsString(
+            'Notificación enviada', 
+            $response->content()
+        );
+    }
+}
