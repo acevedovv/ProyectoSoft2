@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_microservicios
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: gateway
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./gateway:/var/www
+    env_file:
+      - ./gateway/.env
+    depends_on:
+      - mysql
+      - microservicio_notificaciones
+      - microservicio_sentimientos
+
+  microservicio_notificaciones:
+    build:
+      context: ./Microservicio_Notificaciones
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./Microservicio_Notificaciones:/var/www
+    env_file:
+      - ./Microservicio_Notificaciones/.env
+    depends_on:
+      - mysql
+
+  microservicio_sentimientos:
+    build:
+      context: ./MicroservicioSentimientos
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./MicroservicioSentimientos:/app
+    environment:
+      - MICROSERVICE_NOTIFICATION=http://microservicio_notificaciones:8000/api
+      - X_API_Key=123
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  mysql_data:
