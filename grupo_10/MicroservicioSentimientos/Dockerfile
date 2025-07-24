@@ -1,17 +1,14 @@
-# Imagen base
-FROM python:3.13-slim
+FROM python:3.10-slim
 
-# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar los archivos necesarios
+# Copiar TODO el contenido del directorio
 COPY . .
 
-# Instalar dependencias
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Instalar solo las dependencias necesarias
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-# Exponer el puerto
 EXPOSE 5000
 
-# Comando para ejecutar la app
-CMD ["python", "app.py"]
+# Comando de ejecución (igual que funcionaba localmente)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]

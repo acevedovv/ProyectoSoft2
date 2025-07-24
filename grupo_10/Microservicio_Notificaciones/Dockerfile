@@ -1,25 +1,28 @@
-# Dockerfile - Laravel con php artisan serve
-FROM php:8.4.1-cli
+FROM php:8.2-cli
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
-    git unzip zip curl libzip-dev libonig-dev libcurl4-openssl-dev \
-    && docker-php-ext-install pdo pdo_mysql zip
+# Instalar dependencias necesarias y Composer
+RUN apt-get update && apt-get install -y unzip curl git \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Instalar Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+WORKDIR /app
 
-# Establecer el directorio de trabajo
-WORKDIR /var/www
-
-# Copiar todo el proyecto Laravel
 COPY . .
 
 # Instalar dependencias de Laravel
 RUN composer install
 
-# Exponer el puerto donde correrá php artisan serve
+
+
+# Crear directorios necesarios con permisos correctos
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Copiar el archivo de entorno
+COPY .env .env
+
+# Limpiar configuración cacheada y generar clave de aplicación
+RUN php artisan config:clear && php artisan key:generate
+
 EXPOSE 8000
 
-# Comando para levantar Laravel
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

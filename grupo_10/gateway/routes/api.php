@@ -22,7 +22,8 @@ use App\Http\Controllers\AuthController;
 
 
 Route::middleware(['auth:sanctum'])->post('/send-notification', [NotificationController::class, 'sendNotification']);
-Route::middleware(['auth:sanctum', 'role:admin'])->post('/sentiment', [SentimentController::class, 'flask']);
+Route::middleware(['auth:sanctum','role:admin'])->post('/sentiment', [SentimentController::class, 'flask']);
+
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

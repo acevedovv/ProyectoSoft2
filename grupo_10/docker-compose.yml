@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   mysql:
@@ -12,39 +11,52 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./gateway.sql:/docker-entrypoint-initdb.d/gateway.sql
+      - ./notificaciones.sql:/docker-entrypoint-initdb.d/notificaciones.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
   gateway:
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
+    build: ./gateway
+    container_name: gateway
     ports:
       - "8000:8000"
+
     volumes:
       - ./gateway:/var/www
+      - ./gateway/storage:/var/www/storage
     env_file:
       - ./gateway/.env
     depends_on:
-      - mysql
-      - microservicio_notificaciones
-      - microservicio_sentimientos
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
 
   microservicio_notificaciones:
-    build:
-      context: ./Microservicio_Notificaciones
-      dockerfile: Dockerfile
+    build: ./Microservicio_Notificaciones
+    container_name: microservicio_notificaciones
     ports:
       - "8001:8000"
     volumes:
       - ./Microservicio_Notificaciones:/var/www
-    env_file:
-      - ./Microservicio_Notificaciones/.env
+      - ./Microservicio_Notificaciones/storage:/var/www/storage
+    environment:
+      - TWILIO_PHONE_NUMBER=+17176946077
+      - TWILIO_SID=ACead5c4de8f4d28ef98fce1f4334dee0a
+      - TWILIO_AUTH_TOKEN=0da284ebb0d8ca488f5b8c05ab3c4fe3
+ 
+ 
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
 
   microservicio_sentimientos:
-    build:
-      context: ./MicroservicioSentimientos
-      dockerfile: Dockerfile
+    build: ./MicroservicioSentimientos
+    container_name: microservicio_sentimientos
     ports:
       - "5000:5000"
     volumes:
@@ -52,7 +64,25 @@ services:
     environment:
       - MICROSERVICE_NOTIFICATION=http://microservicio_notificaciones:8000/api
       - X_API_Key=123
+      - GATEWAY_AUTH_URL=http://gateway:8000/api/validate-token
       - PYTHONUNBUFFERED=1
+    depends_on:
+      - microservicio_notificaciones
+      - gateway
+    restart: unless-stopped
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports: 
+      - "8080:8080"
+      - "50000:50000"
+    volumes: 
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock 
+    user: root
 
 volumes:
   mysql_data:
+  jenkins_home:
+  
